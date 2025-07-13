@@ -1,19 +1,21 @@
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
-import pandas as pd
 
 def preprocess_data(df):
-    df = df.copy()
-    df.dropna(inplace=True)
-    df = df[df['Volume'] > 0]
-    if df.empty:
-        raise ValueError("After cleaning, dataframe is empty. Check your CSV content.")
-
+    # Select and scale numerical columns
     price_features = ['Open', 'High', 'Low', 'Close']
+    volume_features = ['Volume']
+
+    # Ensure correct types
+    df[volume_features] = df[volume_features].apply(pd.to_numeric, errors='coerce')
+    df['Log_Volume'] = np.log(df['Volume'].clip(lower=1))
+
+    # Fill missing values
+    df['Returns'] = df['Close'].pct_change().fillna(0)
+    df.dropna(inplace=True)
+
+    # Scale prices
     minmax_scaler = MinMaxScaler()
+    standard_scaler = StandardScaler()
     df[price_features] = minmax_scaler.fit_transform(df[price_features])
 
-    standard_scaler = StandardScaler()
-    df[['Log_Volume', 'RSI', 'MACD', 'Returns']] = standard_scaler.fit_transform(
-        df[['Log_Volume', 'RSI', 'MACD', 'Returns']]
-    )
     return df, minmax_scaler, standard_scaler
