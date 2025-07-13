@@ -27,7 +27,6 @@ if uploaded_file:
         df['Returns'] = df['Close'].pct_change()
         df['Log_Volume'] = np.log(df['Volume'].clip(lower=1))
 
-        # RSI
         delta = df['Close'].diff()
         gain = delta.clip(lower=0)
         loss = -delta.clip(upper=0)
@@ -36,7 +35,6 @@ if uploaded_file:
         rs = avg_gain / (avg_loss + 1e-10)
         df['RSI'] = 100 - (100 / (1 + rs))
 
-        # MACD
         ema12 = df['Close'].ewm(span=12, adjust=False).mean()
         ema26 = df['Close'].ewm(span=26, adjust=False).mean()
         macd = ema12 - ema26
@@ -48,7 +46,6 @@ if uploaded_file:
         st.success(f"✅ Cleaned data shape: {df.shape}")
         st.dataframe(df.tail())
 
-        # Save clean data for download
         csv = df.to_csv(index=False).encode("utf-8")
         st.download_button("📥 Download Cleaned Data", csv, "cleaned_financial_data.csv")
 
@@ -59,11 +56,9 @@ if uploaded_file:
 
         with tab1:
             st.subheader("📈 LSTM Price Forecast")
-
             try:
                 features = ['Open', 'High', 'Low', 'Close', 'Log_Volume', 'RSI', 'MACD', 'Returns']
                 X, y = create_sequences(df[features], target_col='Close')
-
                 if len(X) == 0:
                     st.warning("⚠️ Not enough data for sequence modeling.")
                 else:
@@ -76,26 +71,22 @@ if uploaded_file:
                               validation_data=(X_test, y_test),
                               callbacks=[EarlyStopping(patience=3)], verbose=0)
                     preds = model.predict(X_test).flatten()
-
                     st.line_chart({"Actual": y_test[:100], "Predicted": preds[:100]})
             except Exception as e:
                 st.error(f"❌ LSTM Forecasting Error: {e}")
 
         with tab2:
             st.subheader("📉 GARCH Volatility Forecast")
-
             try:
                 vol_forecast, var_1d = forecast_garch_var(df)
                 st.metric("1-Day VaR (95%)", f"{var_1d:.2f}%")
-
                 st.line_chart(vol_forecast.values)
-
                 st.markdown("### 📖 Interpretation")
-                st.info(f"""
+                st.info(f'''
                 ✅ **Volatility Chart** shows predicted market turbulence over time.
                 ✅ **Value at Risk (VaR)**: With 95% confidence, the expected 1-day loss will not exceed **{abs(var_1d):.2f}%**.
                 Useful for risk managers, traders & investors.
-                """)
+                ''')
             except Exception as e:
                 st.error(f"❌ GARCH Forecasting Error: {e}")
 
