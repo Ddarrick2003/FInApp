@@ -17,6 +17,32 @@ uploaded_file = st.file_uploader("📤 Upload your OHLCV CSV file", type=["csv"]
 if uploaded_file:
     try:
         df = pd.read_csv(uploaded_file)
+                # Clean column names
+        df.columns = df.columns.str.strip()
+
+        # Clean and convert Volume
+        if 'Volume' in df.columns:
+            df['Volume'] = df['Volume'].astype(str).str.replace(',', '', regex=False)
+            df['Volume'] = pd.to_numeric(df['Volume'], errors='coerce')
+
+        # Clean and convert % Change
+        if '% Change' in df.columns:
+            df['% Change'] = df['% Change'].astype(str).str.replace('%', '', regex=False)
+            df['% Change'] = pd.to_numeric(df['% Change'], errors='coerce') / 100
+
+        # Convert prices to numeric
+        for col in ['Open', 'High', 'Low', 'Close']:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        # Optional: Handle Date if needed
+        if 'Date' in df.columns:
+            df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+            df.dropna(subset=['Date'], inplace=True)
+            df.set_index('Date', inplace=True)
+
+        # Drop rows where core prices are still missing
+        df.dropna(subset=['Open', 'High', 'Low', 'Close'], inplace=True)
+
 
         required_cols = {'Open', 'High', 'Low', 'Close', 'Volume'}
         if not required_cols.issubset(df.columns):
